@@ -17,7 +17,7 @@ class SearchMovieDelegate extends SearchDelegate<Movie?> {
 
   SearchMovieDelegate({
     required this.searchMovies,
-    this.initialMovies = const [],
+    required this.initialMovies,
   });
 
   void clearStreams() {
@@ -40,6 +40,28 @@ class SearchMovieDelegate extends SearchDelegate<Movie?> {
     });
       
     
+  }
+
+   Widget buildResultsAndSuggestions() {
+    return StreamBuilder(
+      initialData: initialMovies,
+      stream: debounceMovies.stream,
+      builder: (context, snapshot) {
+        
+        final movies = snapshot.data ?? [];
+
+        return ListView.builder(
+          itemCount: movies.length,
+          itemBuilder: (context, index) => _MovieItem(
+            movie: movies[index],
+            onMovieSelected: (context, movie) {
+              clearStreams();
+              close(context, movie);
+            },
+          ),
+        );
+      },
+    );
   }
 
   // Para que aparezca en la barra de busqueda Buscar Película 
@@ -74,7 +96,7 @@ class SearchMovieDelegate extends SearchDelegate<Movie?> {
 
   @override
   Widget buildResults(BuildContext context) {
-    return const Text('buildResults');
+   return buildResultsAndSuggestions();
   }
 
   @override
@@ -82,29 +104,7 @@ class SearchMovieDelegate extends SearchDelegate<Movie?> {
 
     _onQueryChanged(query);
 
-    return StreamBuilder(
-      //future: searchMovies(query), 
-      initialData: initialMovies,
-      stream: debounceMovies.stream,
-      builder: (context, snapshot) {
-
-        final List<Movie> movies = snapshot.data ?? [];
-
-        return ListView.builder(
-          itemCount: movies.length,
-          itemBuilder: (context, index) {
-            final movie = movies[index];
-            return _MovieItem(
-              movie: movie, 
-              onMovieSelected: (context, movie) {
-                clearStreams();
-                close(context, movie);
-              },
-            );
-          },
-        );
-      },
-    );
+   return buildResultsAndSuggestions();
   }
 }
 

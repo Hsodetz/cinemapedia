@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:cinemapedia/domain/entities/movie.dart';
 import 'package:cinemapedia/presentation/providers/actors/actors_by_movie_provider.dart';
 import 'package:cinemapedia/presentation/providers/movies/movie_info_provider.dart';
+import 'package:cinemapedia/presentation/providers/storage/local_storage_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -56,13 +57,25 @@ class MovieScreenState extends ConsumerState<MovieScreen> {
   }
 }
 
-class _CustomSliverAppBar extends StatelessWidget {
+
+// cramos este provider aqui mismo, porque va a ser usado nada mas en esta vista
+// FutureProviderFamily<bool, int> indica que emite un boolean y pide un entero
+final AutoDisposeFutureProviderFamily<bool, int> isFavoriteProvider = FutureProvider.family.autoDispose((ref, int movieId) {
+  final localStorageRepository = ref.watch(localStorageRepositoryProvider);
+  return localStorageRepository.isMovieFavorite(movieId);
+});
+
+
+class _CustomSliverAppBar extends ConsumerWidget {
   final Movie movie;
 
   const _CustomSliverAppBar({required this.movie});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+
+    final isFavoriteFuture = ref.watch(isFavoriteProvider(movie.id));
+
     final size = MediaQuery.of(context).size;
 
     return SliverAppBar(
@@ -71,12 +84,22 @@ class _CustomSliverAppBar extends StatelessWidget {
       foregroundColor: Colors.white,
       actions: [
         IconButton(
-          onPressed: () {},
+          onPressed: () {
+            ref.watch(localStorageRepositoryProvider).toggleFavorite(movie);
+            ref.invalidate(isFavoriteProvider(movie.id));
+          },
+          icon: isFavoriteFuture.when(
+            data: (isFavorite) => isFavorite
+              ? const Icon(Icons.favorite_rounded,color: Colors.red)
+              : const Icon(Icons.favorite_border_outlined)
+            , 
+            error: (_, __) => throw UnimplementedError(), 
+            loading: () => const CircularProgressIndicator(strokeWidth: 4,)),
           //icon: Icon(Icons.favorite_border_outlined)
-          icon: Icon(
-            Icons.favorite_rounded,
-            color: Colors.red,
-          ),
+          // icon: Icon(
+          //   Icons.favorite_rounded,
+          //   color: Colors.red,
+          // ),
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(
